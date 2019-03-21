@@ -127,6 +127,8 @@ int main(int argc, char **argv){
 
   // Get parameters
   pnh.param<double>("accumulator_alpha", accumulator_alpha_, 0.01);
+  pnh.param<double>("cmd_vel_threshold", cmd_vel_threshold_, 0.001);
+  pnh.param<double>("odom_threshold", odom_threshold_, 0.001);
 
   bool use_cmd_vel;
   pnh.param<bool>("use_cmd_vel", use_cmd_vel, false);
@@ -142,9 +144,6 @@ int main(int argc, char **argv){
     odom_sub = n.subscribe("odom", 10, odom_callback);
   }
 
-  pnh.param<double>("cmd_vel_threshold", cmd_vel_threshold_, 0.001);
-  pnh.param<double>("odom_threshold", odom_threshold_, 0.001);
-  
   // Create publisher
   pub_ = n.advertise<sensor_msgs::Imu>("imu_biased", 10);
   bias_pub_ = n.advertise<geometry_msgs::Vector3Stamped>("bias", 10);
