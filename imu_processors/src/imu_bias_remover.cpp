@@ -104,7 +104,7 @@ void imu_callback(const sensor_msgs::ImuConstPtr& msg){
   const bool is_twist_standing_still = (n - twist_last_move_) > twist_standstill_delay_;
   const bool is_odom_standing_still = (n - odom_last_move_) > odom_standstill_delay_;
   
-  if(is_twist_standing_still || is_odom_standing_still){ // Update bias, set outputs to 0
+  if(is_twist_standing_still && is_odom_standing_still){ // Update bias, set outputs to 0
     angular_velocity_accumulator.x = accumulator_update(accumulator_alpha_, angular_velocity_accumulator.x, msg->angular_velocity.x);
     angular_velocity_accumulator.y = accumulator_update(accumulator_alpha_, angular_velocity_accumulator.y, msg->angular_velocity.y);
     angular_velocity_accumulator.z = accumulator_update(accumulator_alpha_, angular_velocity_accumulator.z, msg->angular_velocity.z);
