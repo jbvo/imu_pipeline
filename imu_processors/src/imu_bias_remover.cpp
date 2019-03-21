@@ -155,11 +155,11 @@ int main(int argc, char **argv){
   
   ros::Subscriber cmd_sub;
   if(use_cmd_vel){
-    cmd_sub = n.subscribe("cmd_vel", 10, cmd_vel_callback);
+    cmd_sub = n.subscribe("cmd_vel", 1, cmd_vel_callback);
   }
   ros::Subscriber odom_sub;
   if(use_odom){
-    odom_sub = n.subscribe("odom", 10, odom_callback);
+    odom_sub = n.subscribe("odom", 1, odom_callback);
   }
 
   // Create publisher
