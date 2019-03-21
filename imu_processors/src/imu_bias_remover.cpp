@@ -41,9 +41,6 @@
 ros::Publisher pub_;
 ros::Publisher bias_pub_;
 
-bool use_cmd_vel_;
-bool use_odom_;
-
 bool twist_is_zero_;
 bool odom_is_zero_;
 
@@ -64,31 +61,27 @@ double accumulator_update(const double& alpha, const double& avg, const double& 
 }
 
 void cmd_vel_callback(const geometry_msgs::TwistConstPtr& msg){
-  if(use_cmd_vel_){
-    if(abslt(msg->linear.x, cmd_vel_threshold_) &&
-       abslt(msg->linear.y, cmd_vel_threshold_) &&
-       abslt(msg->linear.z, cmd_vel_threshold_) &&
-       abslt(msg->angular.x, cmd_vel_threshold_) &&
-       abslt(msg->angular.y, cmd_vel_threshold_) &&
-       abslt(msg->angular.z, cmd_vel_threshold_)){
-      twist_is_zero_ = true;
-      return;
-    }
+  if(abslt(msg->linear.x, cmd_vel_threshold_) &&
+     abslt(msg->linear.y, cmd_vel_threshold_) &&
+     abslt(msg->linear.z, cmd_vel_threshold_) &&
+     abslt(msg->angular.x, cmd_vel_threshold_) &&
+     abslt(msg->angular.y, cmd_vel_threshold_) &&
+     abslt(msg->angular.z, cmd_vel_threshold_)){
+    twist_is_zero_ = true;
+    return;
   }
   twist_is_zero_ = false;
 }
 
 void odom_callback(const nav_msgs::OdometryConstPtr& msg){
-  if(use_odom_){
-    if(abslt(msg->twist.twist.linear.x, odom_threshold_) &&
-       abslt(msg->twist.twist.linear.y, odom_threshold_) &&
-       abslt(msg->twist.twist.linear.z, odom_threshold_) &&
-       abslt(msg->twist.twist.angular.x, odom_threshold_) &&
-       abslt(msg->twist.twist.angular.y, odom_threshold_) &&
-       abslt(msg->twist.twist.angular.z, odom_threshold_)){
-      odom_is_zero_ = true;
-      return;
-    }
+  if(abslt(msg->twist.twist.linear.x, odom_threshold_) &&
+     abslt(msg->twist.twist.linear.y, odom_threshold_) &&
+     abslt(msg->twist.twist.linear.z, odom_threshold_) &&
+     abslt(msg->twist.twist.angular.x, odom_threshold_) &&
+     abslt(msg->twist.twist.angular.y, odom_threshold_) &&
+     abslt(msg->twist.twist.angular.z, odom_threshold_)){
+    odom_is_zero_ = true;
+    return;
   }
   odom_is_zero_ = false;
 }
@@ -133,16 +126,19 @@ int main(int argc, char **argv){
   angular_velocity_accumulator.z = 0.0;
 
   // Get parameters
-  pnh.param<bool>("use_cmd_vel", use_cmd_vel_, false);
-  pnh.param<bool>("use_odom", use_odom_, false);
   pnh.param<double>("accumulator_alpha", accumulator_alpha_, 0.01);
+
+  bool use_cmd_vel;
+  pnh.param<bool>("use_cmd_vel", use_cmd_vel, false);
+  bool use_odom;
+  pnh.param<bool>("use_odom", use_odom, false);
   
   ros::Subscriber cmd_sub;
-  if(use_cmd_vel_){
+  if(use_cmd_vel){
     cmd_sub = n.subscribe("cmd_vel", 10, cmd_vel_callback);
   }
   ros::Subscriber odom_sub;
-  if(use_odom_){
+  if(use_odom){
     odom_sub = n.subscribe("odom", 10, odom_callback);
   }
 
