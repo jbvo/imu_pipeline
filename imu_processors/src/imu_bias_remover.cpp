@@ -159,11 +159,17 @@ int main(int argc, char **argv){
   
   ros::Subscriber cmd_sub;
   if(use_cmd_vel){
+    twist_last_move_ = ros::TIME_MAX;
     cmd_sub = n.subscribe("cmd_vel", 1, cmd_vel_callback);
+  } else {
+    twist_last_move_ = ros::TIME_MIN;
   }
   ros::Subscriber odom_sub;
   if(use_odom){
+    odom_last_move_ = ros::TIME_MAX;
     odom_sub = n.subscribe("odom", 1, odom_callback);
+  } else {
+    odom_last_move_ = ros::TIME_MIN;
   }
 
   // Create publisher
