@@ -111,6 +111,12 @@ void imu_callback(const sensor_msgs::ImuConstPtr& msg){
     imu->angular_velocity.x = 0.0;
     imu->angular_velocity.y = 0.0;
     imu->angular_velocity.z = 0.0;
+
+    // Publish bias information
+    geometry_msgs::Vector3StampedPtr bias(new geometry_msgs::Vector3Stamped());
+    bias->header = imu->header;
+    bias->vector = angular_velocity_accumulator;
+    bias_pub_.publish(bias);
   } else { // Modify outputs by bias
     imu->angular_velocity.x -= angular_velocity_accumulator.x;
     imu->angular_velocity.y -= angular_velocity_accumulator.y;
@@ -119,12 +125,6 @@ void imu_callback(const sensor_msgs::ImuConstPtr& msg){
 
   // Publish transformed message
 	pub_.publish(imu);
-
-  // Publish bias information
-  geometry_msgs::Vector3StampedPtr bias(new geometry_msgs::Vector3Stamped());
-  bias->header = imu->header;
-  bias->vector = angular_velocity_accumulator;
-  bias_pub_.publish(bias);
 }
 
 
@@ -164,7 +164,7 @@ int main(int argc, char **argv){
 
   // Create publisher
   pub_ = n.advertise<sensor_msgs::Imu>("imu_biased", 10);
-  bias_pub_ = n.advertise<geometry_msgs::Vector3Stamped>("bias", 10);
+  bias_pub_ = n.advertise<geometry_msgs::Vector3Stamped>("bias", 10, 1);
 
   // Imu Subscriber
   ros::Subscriber sub = n.subscribe("imu", 100, imu_callback);  
