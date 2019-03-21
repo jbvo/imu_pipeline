@@ -153,6 +153,10 @@ int main(int argc, char **argv){
   bool use_odom;
   pnh.param<bool>("use_odom", use_odom, false);
   
+  if (!use_cmd_vel && !use_odom){
+    ROS_WARN("Both use_cmd_vel and use_odom are disabled, no bias will be removed");
+  }
+  
   ros::Subscriber cmd_sub;
   if(use_cmd_vel){
     cmd_sub = n.subscribe("cmd_vel", 1, cmd_vel_callback);
