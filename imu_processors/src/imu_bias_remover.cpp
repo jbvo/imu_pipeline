@@ -44,6 +44,11 @@ ros::Publisher bias_pub_;
 bool twist_is_zero_;
 bool odom_is_zero_;
 
+ros::Time twist_last_move_;
+ros::Time odom_last_move_;
+ros::Duration twist_standstill_delay_;
+ros::Duration odom_standstill_delay_;
+
 double cmd_vel_threshold_;
 double odom_threshold_;
 
@@ -70,6 +75,9 @@ void cmd_vel_callback(const geometry_msgs::TwistConstPtr& msg){
     twist_is_zero_ = true;
     return;
   }
+  else {
+    twist_last_move_ = ros::Time::now();
+  }
   twist_is_zero_ = false;
 }
 
@@ -83,13 +91,20 @@ void odom_callback(const nav_msgs::OdometryConstPtr& msg){
     odom_is_zero_ = true;
     return;
   }
+  else {
+    odom_last_move_ = ros::Time::now();
+  }
   odom_is_zero_ = false;
 }
 
 void imu_callback(const sensor_msgs::ImuConstPtr& msg){
   sensor_msgs::ImuPtr imu(new sensor_msgs::Imu(*msg));
 
-  if(twist_is_zero_ || odom_is_zero_){ // Update bias, set outputs to 0
+  const ros::Time n = ros::Time::now();
+  const bool is_twist_standing_still = (n - twist_last_move_) > twist_standstill_delay_;
+  const bool is_odom_standing_still = (n - odom_last_move_) > odom_standstill_delay_;
+  
+  if(is_twist_standing_still || is_odom_standing_still){ // Update bias, set outputs to 0
     angular_velocity_accumulator.x = accumulator_update(accumulator_alpha_, angular_velocity_accumulator.x, msg->angular_velocity.x);
     angular_velocity_accumulator.y = accumulator_update(accumulator_alpha_, angular_velocity_accumulator.y, msg->angular_velocity.y);
     angular_velocity_accumulator.z = accumulator_update(accumulator_alpha_, angular_velocity_accumulator.z, msg->angular_velocity.z);
@@ -129,6 +144,9 @@ int main(int argc, char **argv){
   pnh.param<double>("accumulator_alpha", accumulator_alpha_, 0.01);
   pnh.param<double>("cmd_vel_threshold", cmd_vel_threshold_, 0.001);
   pnh.param<double>("odom_threshold", odom_threshold_, 0.001);
+  
+  twist_standstill_delay_.fromSec(pnh.param<double>("cmd_vel_delay", 2.0));
+  odom_standstill_delay_.fromSec(pnh.param<double>("odom_delay", 2.0));
 
   bool use_cmd_vel;
   pnh.param<bool>("use_cmd_vel", use_cmd_vel, false);
