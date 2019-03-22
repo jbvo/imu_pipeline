@@ -38,12 +38,16 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Vector3Stamped.h>
 
+#include <optional>
+
 ros::Publisher pub_;
 ros::Publisher bias_pub_;
 
+bool use_odom_;
+bool use_cmd_vel_;
 
-ros::Time twist_last_move_;
-ros::Time odom_last_move_;
+std::optional<ros::Time> twist_last_move_;
+std::optional<ros::Time> odom_last_move_;
 ros::Duration twist_standstill_delay_;
 ros::Duration odom_standstill_delay_;
 
@@ -70,9 +74,11 @@ void cmd_vel_callback(const geometry_msgs::TwistConstPtr& msg){
      abslt(msg->angular.x, cmd_vel_threshold_) &&
      abslt(msg->angular.y, cmd_vel_threshold_) &&
      abslt(msg->angular.z, cmd_vel_threshold_)){
-    return;
-  }
-  else {
+    if (!twist_last_move_.has_value()){
+      // First cmd_vel message, initialize timestamp to start considering bias calculations
+      twist_last_move_ = ros::Time::now();
+    }
+  } else {
     twist_last_move_ = ros::Time::now();
   }
 }
@@ -84,9 +90,11 @@ void odom_callback(const nav_msgs::OdometryConstPtr& msg){
      abslt(msg->twist.twist.angular.x, odom_threshold_) &&
      abslt(msg->twist.twist.angular.y, odom_threshold_) &&
      abslt(msg->twist.twist.angular.z, odom_threshold_)){
-    return;
-  }
-  else {
+    if (!odom_last_move_.has_value()){
+      // First cmd_vel message, initialize timestamp to start considering bias calculations
+      odom_last_move_ = ros::Time::now() - odom_standstill_delay_;
+    }
+  } else {
     odom_last_move_ = ros::Time::now();
   }
 }
@@ -95,10 +103,13 @@ void imu_callback(const sensor_msgs::ImuConstPtr& msg){
   sensor_msgs::ImuPtr imu(new sensor_msgs::Imu(*msg));
 
   const ros::Time n = ros::Time::now();
-  const bool is_twist_standing_still = (n - twist_last_move_) > twist_standstill_delay_;
-  const bool is_odom_standing_still = (n - odom_last_move_) > odom_standstill_delay_;
+  const bool is_twist_standing_still = twist_last_move_.has_value() &&
+                                       (n - *twist_last_move_) > twist_standstill_delay_;
+  const bool is_odom_standing_still = odom_last_move_.has_value() &&
+                                      (n - *odom_last_move_) > odom_standstill_delay_;
   
-  if(is_twist_standing_still && is_odom_standing_still){ // Update bias, set outputs to 0
+  if((!use_cmd_vel_ || is_twist_standing_still) && 
+     (!use_odom_    || is_odom_standing_still )){ // Update bias, set outputs to 0
     angular_velocity_accumulator.x = accumulator_update(accumulator_alpha_, angular_velocity_accumulator.x, msg->angular_velocity.x);
     angular_velocity_accumulator.y = accumulator_update(accumulator_alpha_, angular_velocity_accumulator.y, msg->angular_velocity.y);
     angular_velocity_accumulator.z = accumulator_update(accumulator_alpha_, angular_velocity_accumulator.z, msg->angular_velocity.z);
@@ -140,28 +151,20 @@ int main(int argc, char **argv){
   twist_standstill_delay_.fromSec(pnh.param<double>("cmd_vel_delay", 2.0));
   odom_standstill_delay_.fromSec(pnh.param<double>("odom_delay", 2.0));
 
-  bool use_cmd_vel;
-  pnh.param<bool>("use_cmd_vel", use_cmd_vel, false);
-  bool use_odom;
-  pnh.param<bool>("use_odom", use_odom, false);
+  use_cmd_vel_ = pnh.param<bool>("use_cmd_vel", false);
+  use_odom_    = pnh.param<bool>("use_odom", false);
   
-  if (!use_cmd_vel && !use_odom){
+  if (!use_cmd_vel_ && !use_odom_){
     ROS_WARN("Both use_cmd_vel and use_odom are disabled, no bias will be removed");
   }
   
   ros::Subscriber cmd_sub;
-  if(use_cmd_vel){
-    twist_last_move_ = ros::TIME_MAX;
+  if(use_cmd_vel_){
     cmd_sub = n.subscribe("cmd_vel", 1, cmd_vel_callback);
-  } else {
-    twist_last_move_ = ros::TIME_MIN;
   }
   ros::Subscriber odom_sub;
-  if(use_odom){
-    odom_last_move_ = ros::TIME_MAX;
+  if(use_odom_){
     odom_sub = n.subscribe("odom", 1, odom_callback);
-  } else {
-    odom_last_move_ = ros::TIME_MIN;
   }
 
   // Create publisher

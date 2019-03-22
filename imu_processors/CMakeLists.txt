@@ -2,6 +2,8 @@
 cmake_minimum_required(VERSION 2.8)
 project(imu_processors)
 
+add_definitions("-std=c++17")
+
 # Load catkin and all dependencies required for this package
 find_package(catkin REQUIRED roscpp sensor_msgs geometry_msgs nav_msgs tf)
 
