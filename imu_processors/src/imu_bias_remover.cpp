@@ -41,8 +41,6 @@
 ros::Publisher pub_;
 ros::Publisher bias_pub_;
 
-bool twist_is_zero_;
-bool odom_is_zero_;
 
 ros::Time twist_last_move_;
 ros::Time odom_last_move_;
@@ -72,13 +70,11 @@ void cmd_vel_callback(const geometry_msgs::TwistConstPtr& msg){
      abslt(msg->angular.x, cmd_vel_threshold_) &&
      abslt(msg->angular.y, cmd_vel_threshold_) &&
      abslt(msg->angular.z, cmd_vel_threshold_)){
-    twist_is_zero_ = true;
     return;
   }
   else {
     twist_last_move_ = ros::Time::now();
   }
-  twist_is_zero_ = false;
 }
 
 void odom_callback(const nav_msgs::OdometryConstPtr& msg){
@@ -88,13 +84,11 @@ void odom_callback(const nav_msgs::OdometryConstPtr& msg){
      abslt(msg->twist.twist.angular.x, odom_threshold_) &&
      abslt(msg->twist.twist.angular.y, odom_threshold_) &&
      abslt(msg->twist.twist.angular.z, odom_threshold_)){
-    odom_is_zero_ = true;
     return;
   }
   else {
     odom_last_move_ = ros::Time::now();
   }
-  odom_is_zero_ = false;
 }
 
 void imu_callback(const sensor_msgs::ImuConstPtr& msg){
@@ -134,8 +128,6 @@ int main(int argc, char **argv){
   ros::NodeHandle pnh("~");
 
   // Initialize
-  twist_is_zero_ = false;
-  odom_is_zero_ = false;
   angular_velocity_accumulator.x = 0.0;
   angular_velocity_accumulator.y = 0.0;
   angular_velocity_accumulator.z = 0.0;
