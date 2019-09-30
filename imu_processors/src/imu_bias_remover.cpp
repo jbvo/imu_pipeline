@@ -103,12 +103,17 @@ void imu_callback(const sensor_msgs::ImuConstPtr& msg){
   sensor_msgs::ImuPtr imu(new sensor_msgs::Imu(*msg));
 
   const ros::Time n = ros::Time::now();
-  const bool is_twist_standing_still = twist_last_move_.has_value() &&
-                                       (n - *twist_last_move_) > twist_standstill_delay_;
+
+  // Odom is always transmitted
   const bool is_odom_standing_still = odom_last_move_.has_value() &&
                                       (n - *odom_last_move_) > odom_standstill_delay_;
-  
-  if((!use_cmd_vel_ || is_twist_standing_still) && 
+
+  // cmd_vel is only transmitted when commanding from rqt or locomove_base
+  const bool is_twist_quiet = !twist_last_move_.has_value() && is_odom_standing_still;
+  const bool is_twist_standing_still =  twist_last_move_.has_value() && (n - *twist_last_move_) > twist_standstill_delay_;
+  const bool is_twist_not_commanded = is_twist_quiet || is_twist_standing_still;
+
+  if((!use_cmd_vel_ || is_twist_not_commanded) &&
      (!use_odom_    || is_odom_standing_still )){ // Update bias, set outputs to 0
     angular_velocity_accumulator.x = accumulator_update(accumulator_alpha_, angular_velocity_accumulator.x, msg->angular_velocity.x);
     angular_velocity_accumulator.y = accumulator_update(accumulator_alpha_, angular_velocity_accumulator.y, msg->angular_velocity.y);
